@@ -29,26 +29,24 @@ Results:
 +-----------------------------------------------------------------+-------+------+
 |Name                                                             |Average|Pctile|
 +-----------------------------------------------------------------+-------+------+
-|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_list          |44.289 |40    | < List
-|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_struct        |46.141 |40    |
-|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_list  |472.789|403   |
-|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_struct|295.293|274   | < Struct
-|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_list          |47.38  |40    | < List
-|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_struct        |49.053 |42    |
-|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_struct  |91.462 |81    |
-|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_list    |74.45  |100   | < Struct
-|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_struct  |101.287|160   |
-|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_list    |85.715 |80    | < Struct
+|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_list          |43.442 |40    |
+|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_struct        |41.408 |39    |
+|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_list  |406.412|392   |
+|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_struct|282.134|272   |
+|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_list          |45.453 |41    |
+|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_struct        |47.832 |45    |
+|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_struct  |84.222 |81    |
+|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_list    |63.25  |61    |
+|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_struct  |79.906 |73    |
+|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_list    |70.442 |56    |
 +-----------------------------------------------------------------+-------+------+
-
-Struct 3 > List 2 right now :D
 
 System info:
 Running Mac OS X version 10.10.3 arch x86_64
 Java version 1.8.0_45 JVM Oracle Corporation
-Java flags: -Didea.launcher.port=7534 -Didea.launcher.bin.path=/Applications/IntelliJ IDEA 14.app/Contents/bin -Dfile.encoding=UTF-8
-Memory total 17179869184 bytes, usable 8419659776 bytes
-VM memory free 123337560 bytes, max 3817865216 bytes, total 611319808 bytes
+Java flags: -Didea.launcher.port=7535 -Didea.launcher.bin.path=/Applications/IntelliJ IDEA 14.app/Contents/bin -Dfile.encoding=UTF-8
+Memory total 17179869184 bytes, usable 8692142080 bytes
+VM memory free 330471200 bytes, max 3817865216 bytes, total 783810560 bytes
 CPUs (8):
   Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
   Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
@@ -59,9 +57,9 @@ CPUs (8):
   Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
   Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
 Disks (1):
-  Macintosh HD (/) cap 249795969024 bytes, usable 205665734656 bytes
+  Macintosh HD (/) cap 249795969024 bytes, usable 205665140736 bytes
 PSUs (1):
-  InternalBattery-0: remaining cap 0.301501, time left 4380.000000
+  InternalBattery-0: remaining cap 0.331436, time left -2.000000
 
 =============================================================================
  */
