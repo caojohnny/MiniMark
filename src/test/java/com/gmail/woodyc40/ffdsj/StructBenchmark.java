@@ -23,17 +23,47 @@ import java.util.List;
 import java.util.Random;
 
 /*
-Benchmark                                 Mode   Samples        Score  Score error    Units
-c.g.w.f.StructBenchmark.getList           avgt         5       39.028        6.748    ns/op
-c.g.w.f.StructBenchmark.getStruct         avgt         5       39.152        2.891    ns/op
-c.g.w.f.StructBenchmark.iterateList       avgt         5      448.754       77.533    ns/op
-c.g.w.f.StructBenchmark.iterateStruct     avgt         5      364.938       87.646    ns/op
-c.g.w.f.StructBenchmark.putList           avgt         5       49.892        4.725    ns/op
-c.g.w.f.StructBenchmark.putStruct         avgt         5       46.625        2.691    ns/op
-c.g.w.f.StructBenchmark.removeList        avgt         5       78.443       14.529    ns/op
-c.g.w.f.StructBenchmark.removeStruct      avgt         5       78.730       15.734    ns/op
-c.g.w.f.StructBenchmark.searchList        avgt         5       78.489       13.801    ns/op
-c.g.w.f.StructBenchmark.searchStruct      avgt         5       79.791       26.549    ns/op
+=============================== 8< (Cut here) ===============================
+
+Results:
++-----------------------------------------------------------------+-------+------+
+|Name                                                             |Average|Pctile|
++-----------------------------------------------------------------+-------+------+
+|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_list          |44.289 |40    | < List
+|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_struct        |46.141 |40    |
+|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_list  |472.789|403   |
+|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_struct|295.293|274   | < Struct
+|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_list          |47.38  |40    | < List
+|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_struct        |49.053 |42    |
+|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_struct  |91.462 |81    |
+|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_list    |74.45  |100   | < Struct
+|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_struct  |101.287|160   |
+|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_list    |85.715 |80    | < Struct
++-----------------------------------------------------------------+-------+------+
+
+Struct 3 > List 2 right now :D
+
+System info:
+Running Mac OS X version 10.10.3 arch x86_64
+Java version 1.8.0_45 JVM Oracle Corporation
+Java flags: -Didea.launcher.port=7534 -Didea.launcher.bin.path=/Applications/IntelliJ IDEA 14.app/Contents/bin -Dfile.encoding=UTF-8
+Memory total 17179869184 bytes, usable 8419659776 bytes
+VM memory free 123337560 bytes, max 3817865216 bytes, total 611319808 bytes
+CPUs (8):
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+Disks (1):
+  Macintosh HD (/) cap 249795969024 bytes, usable 205665734656 bytes
+PSUs (1):
+  InternalBattery-0: remaining cap 0.301501, time left 4380.000000
+
+=============================================================================
  */
 public class StructBenchmark {
     private static final int iterations = 100;
@@ -53,7 +83,7 @@ public class StructBenchmark {
 
     public static void main(String[] args) {
         Benchmark benchmark = new Benchmark();
-        benchmark.setProfileIterations(1_000_000).setProfilePrintGranularity(10000);
+        benchmark.setProfileIterations(5_000_000).setProfilePrintGranularity(100_000);
         benchmark.group("Get").perform(new Get())
                 .group("Iterate").perform(new Iterate())
                 .group("Put").perform(new Put())

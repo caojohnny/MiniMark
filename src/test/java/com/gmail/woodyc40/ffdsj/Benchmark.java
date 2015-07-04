@@ -154,16 +154,11 @@ public class Benchmark {
     public Benchmark perform(Unit unit) {
         if (string == null) throw new IllegalStateException("Group cannot be null");
 
-        int testCase = 1;
         for (Method s : unit.getClass().getDeclaredMethods()) {
             if (!s.isAnnotationPresent(Measure.class)) continue;
 
             String key = s.getDeclaringClass().getName().replaceAll("\\.", "_") + "_" + s.getName();
             benchmarks.get(string).put(key, new Mark(key, unit, s.getName()));
-            testCase++;
-            if (testCase >= 12) {
-                throw new IllegalStateException("Too many tests");
-            }
         }
 
         return this;
@@ -209,6 +204,8 @@ public class Benchmark {
         System.out.println();
         System.out.println("=============================================================================");
 
+        // agh
+
         for (String dep : depped) {
             File file = new File(dep);
             file.delete();
@@ -231,6 +228,11 @@ public class Benchmark {
         BigDecimal sub = value.multiply(BigDecimal.valueOf(longs.size()));
         int idx = sub.divide(HUNDRED, BigDecimal.ROUND_HALF_EVEN).intValue();
 
+        // Essentially - we can't use a List - no ordering
+        // Can't sort - would take too long, and runs out of heap
+        // therefore, we have to do it the long way
+        // and use a sorted collection
+        // Remember to use a List or other collection which allows dupes!!!
         Iterator<Long> iterator = longs.iterator();
         for (int i = 0; i < idx; i++) {
             Long l = iterator.next();
