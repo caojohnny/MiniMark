@@ -1,3 +1,5 @@
 FFDSJ.iml
-com/.
-target/.
+com/*
+target/*
+.idea/*
+.DS_Store
