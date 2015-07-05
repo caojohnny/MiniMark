@@ -39,8 +39,6 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -721,7 +719,7 @@ public class Benchmark {
         public Runnable setup = NO_OP;
         public Runnable teardown = NO_OP;
 
-        public long nanoAccuracy() {
+        public final long nanoAccuracy() {
             long start = System.nanoTime();
             long stop;
 
@@ -730,7 +728,7 @@ public class Benchmark {
             return stop - start;
         }
 
-        public int calcIterations(long speculatedTimePerOp, long nanoAcc, int left) {
+        public final int calcIterations(long speculatedTimePerOp, long nanoAcc, int left) {
             double timeMustPass = Math.ceil(nanoAcc * 2); // Compensates for fluctuations in
                                                           // accuracy of nanotime
 
@@ -785,7 +783,8 @@ public class Benchmark {
 
         public void addValues(Table table, String group) {
             Row row = table.createRow();
-            row.setColumn(0, group + " - " + name).setColumn(1, BigDecimal.valueOf(avg).round(new MathContext(3, RoundingMode.HALF_EVEN)).toString());
+            row.setColumn(0, group + " - " + name).setColumn(1, BigDecimal.valueOf(avg)
+                    .divide(BigDecimal.ONE, 3, BigDecimal.ROUND_HALF_UP).toString());
         }
 
         /**

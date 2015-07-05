@@ -29,24 +29,24 @@ Results:
 +-----------------------------------------------------------------+-------+
 |Name                                                             |Average|
 +-----------------------------------------------------------------+-------+
-|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_list          |50.3   |
-|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_struct        |51.8   |
-|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_list  |402    |
-|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_struct|285    |
-|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_list          |56.3   |
-|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_struct        |52.9   |
-|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_struct  |121    |
-|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_list    |116    |
-|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_struct  |119    |
-|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_list    |113    |
+|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_list          |49.601 |
+|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_struct        |47.576 |
+|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_list  |440.676|
+|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_struct|288.996|
+|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_list          |63.693 |
+|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_struct        |52.075 |
+|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_struct  |113.798|
+|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_list    |117.589|
+|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_struct  |117.876|
+|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_list    |119.091|
 +-----------------------------------------------------------------+-------+
 
 System info:
 Running Mac OS X version 10.10.3 arch x86_64
 Java version 1.8.0_45 JVM Oracle Corporation
-Java flags: -Didea.launcher.port=7536 -Didea.launcher.bin.path=/Applications/IntelliJ IDEA 14.app/Contents/bin -Dfile.encoding=UTF-8
-Memory total 17179869184 bytes, usable 8493486080 bytes
-VM memory free 276716496 bytes, max 3817865216 bytes, total 324534272 bytes
+Java flags: -Didea.launcher.port=7533 -Didea.launcher.bin.path=/Applications/IntelliJ IDEA 14.app/Contents/bin -Dfile.encoding=UTF-8
+Memory total 17179869184 bytes, usable 8480411648 bytes
+VM memory free 211986072 bytes, max 3817865216 bytes, total 257425408 bytes
 CPUs (8):
   Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
   Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
@@ -57,7 +57,7 @@ CPUs (8):
   Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
   Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
 Disks (1):
-  Macintosh HD (/) cap 249795969024 bytes, usable 205422489600 bytes
+  Macintosh HD (/) cap 249795969024 bytes, usable 205430296576 bytes
 PSUs (1):
   InternalBattery-0: remaining cap 1.000000, time left -2.000000
 
