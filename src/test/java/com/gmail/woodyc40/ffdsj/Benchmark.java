@@ -39,7 +39,6 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -120,11 +119,7 @@ public class Benchmark {
     /** The iterations to run the profiler */
     private int profileIterations = 500_000_000;
     /** The iterations to run the warmup */
-    private int warmupIterations = 30_000;
-    /** The iteration mod granularity prints the time */
-    private int warmupPrintGranularity = 5_000;
-    /** Iteration mod granularity prints the time */
-    private int profilePrintGranularity = 10_000_000;
+    private int warmupIterations = 100_000;
 
     /** Insertion order mapping of the group -> benchmarks in that group */
     private final Map<String, Map<String, Mark>> benchmarks = new LinkedHashMap<>();
@@ -185,12 +180,13 @@ public class Benchmark {
             }
         }
 
+        System.out.println();
         System.out.println("=============================== 8< (Cut here) ===============================");
         System.out.println();
         System.out.println("Results:");
 
         Table table = new Table();
-        table.setNames("Name", "Average", "Pctile");
+        table.setNames("Name", "Average");
         for (String s : benchmarks.keySet()) {
             Map<String, Mark> marks = benchmarks.get(s);
             for (Mark mark : marks.values()) {
@@ -220,12 +216,12 @@ public class Benchmark {
      * Finds the percentile
      *
      * @param outOfHundred 90, or whatever percentage you want
-     * @param longs the data to find the percentile. Must be a TreeMultiset.
+     * @param doubles the data to find the percentile. Must be a TreeMultiset.
      * @return the percentile
      */
-    private static long findPercentile(int outOfHundred, Collection<Long> longs) {
+    private static double findPercentile(int outOfHundred, Collection<Double> doubles) {
         BigDecimal value = BigDecimal.valueOf(outOfHundred);
-        BigDecimal sub = value.multiply(BigDecimal.valueOf(longs.size()));
+        BigDecimal sub = value.multiply(BigDecimal.valueOf(doubles.size()));
         int idx = sub.divide(HUNDRED, BigDecimal.ROUND_HALF_EVEN).intValue();
 
         // Essentially - we can't use a List - no ordering
@@ -233,9 +229,9 @@ public class Benchmark {
         // therefore, we have to do it the long way
         // and use a sorted collection
         // Remember to use a List or other collection which allows dupes!!!
-        Iterator<Long> iterator = longs.iterator();
+        Iterator<Double> iterator = doubles.iterator();
         for (int i = 0; i < idx; i++) {
-            Long l = iterator.next();
+            Double l = iterator.next();
             if (i == idx - 1) {
                 return l;
             }
@@ -258,20 +254,6 @@ public class Benchmark {
     }
 
     /**
-     * Sets the rate at which to print the time of the current iteration
-     *
-     * <p>This is the iteration mod granularity, which then prints the time taken for that
-     * iteration. The iteration is divided by granularity for clarity.</p>
-     *
-     * @param warmupPrintGranularity the granularity
-     * @return the current instance
-     */
-    public Benchmark setWarmupPrintGranularity(int warmupPrintGranularity) {
-        this.warmupPrintGranularity = warmupPrintGranularity;
-        return this;
-    }
-
-    /**
      * Sets the iteration to profile the methods
      *
      * <p>This number is preferably in the millions or hundred thousands at least</p>
@@ -281,20 +263,6 @@ public class Benchmark {
      */
     public Benchmark setProfileIterations(int profileIterations) {
         this.profileIterations = profileIterations;
-        return this;
-    }
-
-    /**
-     * Sets the granularity to print the profile iteration time
-     *
-     * <p>This is the iteration mod granularity, which then prints the time taken for that
-     * iteration. The iteration is divided by granularity for clarity.</p>
-     *
-     * @param profilePrintGranularity the granularity
-     * @return the current instance
-     */
-    public Benchmark setProfilePrintGranularity(int profilePrintGranularity) {
-        this.profilePrintGranularity = profilePrintGranularity;
         return this;
     }
 
@@ -400,75 +368,144 @@ public class Benchmark {
          * @throws InstantiationException
          */
         private void instrument() throws NotFoundException, CannotCompileException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
-            CtClass superclass = ClassPool.getDefault().get(unit.getClass().getName());
-            CtClass file = ClassPool.getDefault().makeClass(unit.getClass().getPackage().getName() + ".Benchmark_" + name + "_implInvoker",
+            ClassPool classPool = ClassPool.getDefault();
+            CtClass superclass = classPool.get(unit.getClass().getName());
+            CtClass file = classPool.makeClass(unit.getClass().getPackage().getName() + ".Benchmark_" + name + "_implInvoker",
                     superclass);
             invoker = file.getName();
 
-            CtClass benchmark = ClassPool.getDefault().get(Benchmark.class.getName());
-            CtClass unit = ClassPool.getDefault().get(Unit.class.getName());
-            CtClass result = ClassPool.getDefault().get(Result.class.getName());
+            CtClass benchmark = classPool.get(Benchmark.class.getName());
+            CtClass unit = classPool.get(Unit.class.getName());
+            CtClass result = classPool.get(Result.class.getName());
 
             CtConstructor constructor = CtNewConstructor.make("public " + file.getSimpleName() + "() {}", file);
             file.addConstructor(constructor);
 
-            CtMethod method = new CtMethod(
-                    ClassPool.getDefault().get(void.class.getName()),
-                    "doTest",
-                    new CtClass[0],
-                    file
-            );
-            method.setBody("{java.io.DataOutputStream stream = null;\n" +
+            CtMethod warmup;
+            CtMethod measure;
+            if (this.unit.getClass().getDeclaredMethod(meName, Blackhole.class).getReturnType().equals(void.class)) {
+                warmup = CtNewMethod.make("public long warmup() {\n" +
+                        "System.out.println(\"Warming up " + name + "\");\n\n" +
+
+                        "int done = 0;\n" +
+                        "long start = System.nanoTime();\n" +
+                        "do {\n" +
+                        "    super." + meName + "(hole);\n" +
+                        "    done += 1;\n" +
+                        "} while (done < " + warmupIterations + ");\n" +
+                        "long end = System.nanoTime();\n" +
+                        "long elapsed = end - start;\n" +
+                        "long ret = (long) (elapsed / " + warmupIterations + ");\n" +
+                        "System.out.println(\"Finished warmup for " + name + "\");\n" +
+                        "System.out.println();\n" +
+
+                        "return ret;}\n", file);
+
+                measure = CtNewMethod.make("public long measure(int reps) {" +
+                        "int done = 0;\n" +
+                        "long start = System.nanoTime();\n" +
+                        "do {\n" +
+                        "    super." + meName + "(hole);\n" +
+                        "} while (++done < reps);\n" +
+                        "long end = System.nanoTime();" +
+                        "return (long) (end - start);}", file);
+            } else {
+                warmup = CtNewMethod.make("public long warmup() {\n" +
+                        "System.out.println(\"Warming up " + name + "\");\n\n" +
+
+                        "int done = 0;\n" +
+                        "long start = System.nanoTime();\n" +
+                        "do {\n" +
+                        "    hole.consume(super." + meName + "(hole));\n" +
+                        "    done += 1;\n" +
+                        "} while (done < " + warmupIterations + ");\n" +
+                        "long end = System.nanoTime();\n" +
+                        "long elapsed = end - start;\n" +
+                        "long ret = (long) (elapsed / " + warmupIterations + ");\n" +
+
+                        "return ret;}\n", file);
+                measure = CtNewMethod.make("public long measure(int reps) {" +
+                        "int done = 0;\n" +
+                        "long start = System.nanoTime();\n" +
+                        "do {\n" +
+                        "    hole.consume(super." + meName + "(hole));\n" +
+                        "} while (++done < reps);\n" +
+                        "long end = System.nanoTime();" +
+                        "return (long) (end - start);}", file);
+            }
+            file.addMethod(warmup);
+            file.addMethod(measure);
+
+            CtMethod method = CtNewMethod.make("public void doTest() {java.io.DataOutputStream stream = null;\n" +
                     "java.net.Socket socket = null;\n" +
                     "try {System.out.println(\"Starting test " + name + "\");\n" +
                     "System.out.println();\n" +
-                    "System.out.println(\"Warming up " + name + "\");\n\n" +
+                    "long warmTime = warmup();\n" +
 
-                    "int done = 0;\n" +
-                    "do {\n" +
-                    "    setup.run();\n" +
-                    "    long start = System.nanoTime();\n" +
-                    "    long stop = super." + meName + "(hole) - start;\n" +
-                    (warmupPrintGranularity > 0 ? "    if (done % " + warmupPrintGranularity + " == 0) System.out.println(\"Iteration \" + done / " + warmupPrintGranularity + " + \": \" + stop + \" ns\");\n" : "\n") +
-                    "    done += 1;\n" +
-                    "    teardown.run();\n" +
-                    "} while (done < " + warmupIterations + ");\n\n" +
-
-                    "done = 0;\n" +
-
-                    "System.out.println(\"Warmup done\");\n" +
-                    "System.out.println();\n" +
                     "socket = new java.net.Socket(\"localhost\", 5000);\n" +
                     "stream = new java.io.DataOutputStream(socket.getOutputStream());\n" +
                     "System.out.println(\"Starting profile for " + name + "\");\n" +
+
+                    /*
+                    In order to get a quantifiable time
+                           in the case that warmTime, which is the time
+                           taken for each operation in the warmup to complete,
+                           is less than the granularity or latency value
+                           for the system clock, we need to iterate a few
+                           times and get the value of that. The reps is calculated
+                           by the amount of times the operation will complete before
+                           the system clock updates, given a generous 100 ns.
+                    */
+                    "\n" +
+                    "long nanoAcc = nanoAccuracy();\n" +
+                    "int reps = calcIterations(warmTime, nanoAcc, 0, 0);\n" +
+                    "\n" +
+                    "java.math.BigDecimal totalTime = new java.math.BigDecimal(0);\n" +
+                    "int done = 0;\n" +
+
                     "do {\n" +
-                    "    hole.trickJit();\n" +
-                    "    setup.run();\n" +
-                    "    long start = System.nanoTime();\n" +
-                    "    long stop = super." + meName + "(hole) - start;\n" +
-                    "    stream.writeLong(stop);\n" +
-                    (profilePrintGranularity > 0 ? "    if (done % " + profilePrintGranularity + " == 0) System.out.println(\"Iteration \" + done / " + profilePrintGranularity + " + \": \" + stop + \" ns\");\n" : "\n") +
-                    "    done += 1;\n" +
+                    "    long time = 0L;\n" +
+                    "    int finished = 0;\n" +
+                    "    setup.run(); hole.trickJit();\n" +
+                    "    do {\n" +
+                    "        reps++;\n" +
+                    "        time = measure(reps);\n" +
+                    "        finished = reps;\n" +
+                    "        reps = calcIterations(time, nanoAcc = nanoAccuracy(), reps, (" + profileIterations + " - (done + finished)) - 1);\n" +
+                    "        if (reps + done > " + profileIterations + ")\n" +
+                    "            reps = 1;\n" +
+                    "    } while (time <= nanoAcc);\n" +
                     "    teardown.run();\n" +
-                    "} while (done < " + profileIterations  + ");\n\n" +
+                    "    totalTime = totalTime.add(java.math.BigDecimal.valueOf(time));\n" +
+                    "    done += finished;\n" +
+                    "} while (done < " + profileIterations + ");\n" +
 
                     "hole = null;\n" +
-                    "System.out.println(\"Done test\");\n" +
+                    "stream.writeDouble(totalTime.doubleValue());\n" +
+                    "System.out.println(\"Finished testing of " + name + "\");\n" +
+                    "System.out.println();\n" +
+                    "System.out.println(\"Done test for " + name + "\");\n" +
+                    "System.out.println();\n" +
                     "} catch (Exception e) {\n" +
                     "    e.printStackTrace();\n" +
                     "    if (stream != null) {\n" +
-                    "        stream.writeLong(-1L);\n" +
+                    "        stream.writeDouble(-1D);\n" +
                     "    }\n" +
                     "    if (socket != null) socket.close();\n" +
                     "} finally {\n" +
-                    "    if (stream != null) {\n" +
-                    "        stream.writeLong(-1L);\n" +
-                    "    }\n" +
                     "    if (socket != null) socket.close();\n" +
-                    "}}");
+                    "}}", file);
             file.addMethod(method);
 
-            CtMethod main = CtNewMethod.make("public static void main(String[] args) { new " + invoker + "().doTest(); }", file);
+            CtMethod main = CtNewMethod.make("public static void main(String[] args) {\n" +
+                    "int done = 0;\n" + // Settle in the JVM, warmups may not be enough to completely
+                                        // transition the VM into ready state
+                    "System.out.println(\"Setting VM for " + name + "\");\n" +
+                    "for (int i = 0; i < 5000000; i++) { done += new Object().hashCode(); }\n" +
+                    "if (done / 2 == 6) { System.out.println(); }\n" +
+                    "Thread.sleep(2000L);\n" +
+                    "new " + invoker + "().doTest();\n" +
+                    "}", file);
             file.addMethod(main);
 
             Class<?> $result = Result.class;
@@ -546,7 +583,7 @@ public class Benchmark {
                 try {
                     String s = System.getProperty("os.name").contains("Windows") ? ".exe" : "";
                     String javaCmd = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java" + s;
-                    List<String> args = Lists.newArrayList("java");
+                    List<String> args = Lists.newArrayList(javaCmd);
                     Collections.addAll(args, Benchmark.this.args);
                     args.addAll(Lists.newArrayList("-classpath", ".", invoker));
 
@@ -569,13 +606,9 @@ public class Benchmark {
 
                     stream = new DataInputStream(conn.getInputStream());
 
-                    List<Long> longs = new ArrayList<>(profileIterations);
-                    long l;
-                    while ((l = stream.readLong()) != -1L) {
-                        longs.add(l);
-                    }
+                    double d = stream.readDouble();
 
-                    return result = Result.compile(Benchmark.this, name, longs);
+                    return result = Result.compile(Benchmark.this, name, d / profileIterations);
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
@@ -696,6 +729,46 @@ public class Benchmark {
         public Blackhole hole = new Blackhole();
         public Runnable setup = NO_OP;
         public Runnable teardown = NO_OP;
+
+        public long nanoAccuracy() {
+            long start = System.nanoTime();
+            long stop;
+
+            while ((stop = System.nanoTime()) == start);
+
+            return stop - start;
+        }
+
+        public int calcIterations(long speculatedTimePerOp, long nanoAcc, int last, int left) {
+            double timeMustPass = Math.ceil(nanoAcc * 2); // Compensates for fluctuations in
+                                                          // accuracy of nanotime
+
+            // Avoids rechecking too often
+            int shouldDo = 4;
+            if (speculatedTimePerOp < timeMustPass) {
+                // Calculates amount that can be usefully done in the required time
+                // minus one because the increment occurs first
+                int might = (int) Math.ceil(timeMustPass / speculatedTimePerOp) - 1;
+
+                // If it breaks the minimum, we've got the value
+                if (might > shouldDo) {
+                    shouldDo = might;
+                }
+
+                // Otherwise if it is too small, handle the minimum value
+            }
+
+            // If the amount of repetitions left is less than the current amount
+            // add that too so we can finish evenly
+            // sometimes this will fail... check has been added in the synthetic method
+            if (left != 0) {
+                if (left <= shouldDo) {
+                    shouldDo = left;
+                }
+            }
+
+            return shouldDo;
+        }
     }
 
     /**
@@ -705,42 +778,21 @@ public class Benchmark {
      */
     public static class Result {
         // Data
-        private final long percentile;
         private final double avg;
         private final String name;
-        private final Collection<Long> data;
 
-        private Result(Benchmark benchmark, String name, Collection data) {
+        private Result(Benchmark benchmark, String name, double data) {
             this.name = name;
-            this.data = data;
-
-            percentile = findPercentile(90, data);
-            long total = 0;
-            for (Object l : data) {
-                total += (long) l;
-            }
-
-            avg = BigDecimal.valueOf(total)
-                    .divide(BigDecimal.valueOf(benchmark.profileIterations), 3, RoundingMode.HALF_UP)
-                    .doubleValue();
+            this.avg = data;
         }
 
-        public static Result compile(Benchmark benchmark, String name, Collection data) {
+        public static Result compile(Benchmark benchmark, String name, double data) {
             return new Result(benchmark, name, data);
         }
 
         public void addValues(Table table, String group) {
             Row row = table.createRow();
-            row.setColumn(0, group + " - " + name).setColumn(1, String.valueOf(avg)).setColumn(2, String.valueOf(percentile));
-        }
-
-        /**
-         * Obtains the 90th percentile
-         *
-         * <p>You can get your own percentile by using the data provided by data()</p>
-         */
-        public long percentile() {
-            return percentile;
+            row.setColumn(0, group + " - " + name).setColumn(1, String.valueOf(avg));
         }
 
         /**
@@ -755,15 +807,6 @@ public class Benchmark {
          */
         public String name() {
             return name;
-        }
-
-        /**
-         * Data recorded by the benchmark
-         *
-         * @return the data
-         */
-        public Collection<Long> data() {
-            return data;
         }
     }
 

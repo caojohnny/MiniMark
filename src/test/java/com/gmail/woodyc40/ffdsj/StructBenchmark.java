@@ -81,7 +81,7 @@ public class StructBenchmark {
 
     public static void main(String[] args) {
         Benchmark benchmark = new Benchmark();
-        benchmark.setProfileIterations(5_000_000).setProfilePrintGranularity(100_000);
+        benchmark.setProfileIterations(5_000_000);
         benchmark.group("Get").perform(new Get())
                 .group("Iterate").perform(new Iterate())
                 .group("Put").perform(new Put())
