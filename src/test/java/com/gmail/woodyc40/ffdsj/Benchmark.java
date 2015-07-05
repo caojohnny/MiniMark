@@ -39,6 +39,8 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -70,7 +72,7 @@ import java.util.*;
  * concurrency support yet.</p>
  *
  * <p>Classes which hold benchmarks (those extending Unit) must be public, and non-final. Methods
- * must have parameter Blackhole, and return a long. The long must be System.nanoTime() called
+ * must have parameter StatefulOp, and return a long. The long must be System.nanoTime() called
  * IMMEDIATELY after the operation executes. The blackhole consumption can be included if desired.</p>
  *
  * <p>Example:
@@ -80,17 +82,17 @@ import java.util.*;
  *             new Benchmark().group("Benchmark").perform(new Bench()).run();
  *         }
  *
- *         &#64;Benchmark.Unit public long time(Benchmark.Blackhole hole) {
- *             hole.consume(...);
+ *         &#64;Benchmark.Unit public long time(Benchmark.StatefulOp hole) {
+ *             hole.op(...);
  *             return System.nanoTime();
  *         }
  *
  *         // Minimal overhead idiom
- *         &#64;Benchmark.Unit public long timeAnother(Benchmark.Blackhole hole) {
+ *         &#64;Benchmark.Unit public long timeAnother(Benchmark.StatefulOp hole) {
  *             Object o = ...
  *             long time = System.nanoTime();
  *
- *             hole.consume(o);
+ *             hole.op(o);
  *             return time;
  *         }
  *     }
@@ -383,10 +385,8 @@ public class Benchmark {
 
             CtMethod warmup;
             CtMethod measure;
-            if (this.unit.getClass().getDeclaredMethod(meName, Blackhole.class).getReturnType().equals(void.class)) {
+            if (this.unit.getClass().getDeclaredMethod(meName, StatefulOp.class).getReturnType().equals(void.class)) {
                 warmup = CtNewMethod.make("public long warmup() {\n" +
-                        "System.out.println(\"Warming up " + name + "\");\n\n" +
-
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
@@ -395,11 +395,8 @@ public class Benchmark {
                         "} while (done < " + warmupIterations + ");\n" +
                         "long end = System.nanoTime();\n" +
                         "long elapsed = end - start;\n" +
-                        "long ret = (long) (elapsed / " + warmupIterations + ");\n" +
-                        "System.out.println(\"Finished warmup for " + name + "\");\n" +
-                        "System.out.println();\n" +
-
-                        "return ret;}\n", file);
+                        "return (long) (elapsed / " + warmupIterations + ");\n" +
+                        "}\n", file);
 
                 measure = CtNewMethod.make("public long measure(int reps) {" +
                         "int done = 0;\n" +
@@ -411,24 +408,21 @@ public class Benchmark {
                         "return (long) (end - start);}", file);
             } else {
                 warmup = CtNewMethod.make("public long warmup() {\n" +
-                        "System.out.println(\"Warming up " + name + "\");\n\n" +
-
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    hole.consume(super." + meName + "(hole));\n" +
+                        "    hole.op(super." + meName + "(hole));\n" +
                         "    done += 1;\n" +
                         "} while (done < " + warmupIterations + ");\n" +
                         "long end = System.nanoTime();\n" +
                         "long elapsed = end - start;\n" +
-                        "long ret = (long) (elapsed / " + warmupIterations + ");\n" +
-
-                        "return ret;}\n", file);
+                        "return (long) (elapsed / " + warmupIterations + ");\n" +
+                        "}\n", file);
                 measure = CtNewMethod.make("public long measure(int reps) {" +
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    hole.consume(super." + meName + "(hole));\n" +
+                        "    hole.op(super." + meName + "(hole));\n" +
                         "} while (++done < reps);\n" +
                         "long end = System.nanoTime();" +
                         "return (long) (end - start);}", file);
@@ -440,7 +434,10 @@ public class Benchmark {
                     "java.net.Socket socket = null;\n" +
                     "try {System.out.println(\"Starting test " + name + "\");\n" +
                     "System.out.println();\n" +
+                    "System.out.println(\"Warming up " + name + "\");\n" +
                     "long warmTime = warmup();\n" +
+                    "System.out.println(\"Finished warmup for " + name + "\");\n" +
+                    "System.out.println();\n" +
 
                     "socket = new java.net.Socket(\"localhost\", 5000);\n" +
                     "stream = new java.io.DataOutputStream(socket.getOutputStream());\n" +
@@ -458,7 +455,7 @@ public class Benchmark {
                     */
                     "\n" +
                     "long nanoAcc = nanoAccuracy();\n" +
-                    "int reps = calcIterations(warmTime, nanoAcc, 0, 0);\n" +
+                    "int reps = calcIterations(warmTime, nanoAcc, 0);\n" +
                     "\n" +
                     "java.math.BigDecimal totalTime = new java.math.BigDecimal(0);\n" +
                     "int done = 0;\n" +
@@ -471,7 +468,7 @@ public class Benchmark {
                     "        reps++;\n" +
                     "        time = measure(reps);\n" +
                     "        finished = reps;\n" +
-                    "        reps = calcIterations(time, nanoAcc = nanoAccuracy(), reps, (" + profileIterations + " - (done + finished)) - 1);\n" +
+                    "        reps = calcIterations(time / reps, nanoAcc = nanoAccuracy(), (" + profileIterations + " - (done + finished)) - 1);\n" +
                     "        if (reps + done > " + profileIterations + ")\n" +
                     "            reps = 1;\n" +
                     "    } while (time <= nanoAcc);\n" +
@@ -498,13 +495,17 @@ public class Benchmark {
             file.addMethod(method);
 
             CtMethod main = CtNewMethod.make("public static void main(String[] args) {\n" +
+                    invoker + " test = new " + invoker + "();\n" +
                     "int done = 0;\n" + // Settle in the JVM, warmups may not be enough to completely
                                         // transition the VM into ready state
                     "System.out.println(\"Setting VM for " + name + "\");\n" +
                     "for (int i = 0; i < 5000000; i++) { done += new Object().hashCode(); }\n" +
                     "if (done / 2 == 6) { System.out.println(); }\n" +
-                    "Thread.sleep(2000L);\n" +
-                    "new " + invoker + "().doTest();\n" +
+                    "long time = System.currentTimeMillis();" +
+                    "do {" +
+                    "test.warmup();" +
+                    "} while (System.currentTimeMillis() - time < 2000L);" +
+                    "test.doTest();\n" +
                     "}", file);
             file.addMethod(main);
 
@@ -591,17 +592,7 @@ public class Benchmark {
                     builder.directory(new File(".")).inheritIO().start();
 
                     int port = 5000;
-                    socket = null;
-                    while (socket == null) {
-                        try {
-                            socket = new ServerSocket(port);
-                        } catch (IOException e) {
-                            if (e.getMessage().contains("use"))
-                                port++;
-                            else throw new RuntimeException(e);
-                        }
-                    }
-
+                    socket = new ServerSocket(5000);
                     while ((conn = socket.accept()) == null) ;
 
                     stream = new DataInputStream(conn.getInputStream());
@@ -630,7 +621,7 @@ public class Benchmark {
      *
      * @author Pierre C
      */
-    public static class Blackhole {
+    public static class StatefulOp {
         // Sinks
         private int random = new Random().nextInt(2_000_000_000);
         private int intSink;
@@ -643,14 +634,14 @@ public class Benchmark {
         private boolean booleanSink;
 
         // Only instantiable in this class
-        Blackhole() {
+        StatefulOp() {
         }
 
         /**
          * Called to use the fields - smart JIT's will eliminate usages of a fields that don't do anything
          */
         public void trickJit() {
-            long type = (long) (intSink + floatSink + doubleSink + charSink + shortSink + longSink + byteSink / 2);
+            long type = (long) (intSink + floatSink + doubleSink + charSink + shortSink + longSink + byteSink + random / 2);
             if (booleanSink ? type == -1 : type == -3) { // Dividing by two
                                                          // probably not result in odd number
                                                          // or negative numbers
@@ -660,60 +651,60 @@ public class Benchmark {
 
         // Consumption methods
 
-        public void consume(Object o) {
+        public void op(Object o) {
             // o.hashCode intrinsic
             // probably only 2-5 instructions to check this
             if (o.hashCode() == random) {
-                random = o.hashCode(); // Fairly "expensive"
+                random = o.toString().hashCode(); // Fairly "expensive"
             }
         }
 
         // Each method given for the primitive
         // primitive boxing is very expensive at times
         // otherwise use Object cast as necessary
-        public void consume(int i) {
+        public void op(int i) {
             if (intSink == i) {
                 intSink = i;
             }
         }
 
-        public void consume(float i) {
+        public void op(float i) {
             if (floatSink == i) {
                 floatSink = i;
             }
         }
 
-        public void consume(double i) {
+        public void op(double i) {
             if (doubleSink == i) {
                 doubleSink = i;
             }
         }
 
-        public void consume(char i) {
+        public void op(char i) {
             if (charSink == i) {
                 charSink = i;
             }
         }
 
-        public void consume(short i) {
+        public void op(short i) {
             if (shortSink == i) {
                 shortSink = i;
             }
         }
 
-        public void consume(long i) {
+        public void op(long i) {
             if (longSink == i) {
                 longSink = i;
             }
         }
 
-        public void consume(byte i) {
+        public void op(byte i) {
             if (byteSink == i) {
                 byteSink = i;
             }
         }
 
-        public void consume(boolean i) {
+        public void op(boolean i) {
             if (booleanSink == i) {
                 booleanSink = !i;
             }
@@ -726,7 +717,7 @@ public class Benchmark {
      * @author Pierre C
      */
     public static class Unit {
-        public Blackhole hole = new Blackhole();
+        public StatefulOp hole = new StatefulOp();
         public Runnable setup = NO_OP;
         public Runnable teardown = NO_OP;
 
@@ -739,9 +730,11 @@ public class Benchmark {
             return stop - start;
         }
 
-        public int calcIterations(long speculatedTimePerOp, long nanoAcc, int last, int left) {
+        public int calcIterations(long speculatedTimePerOp, long nanoAcc, int left) {
             double timeMustPass = Math.ceil(nanoAcc * 2); // Compensates for fluctuations in
                                                           // accuracy of nanotime
+
+            if (speculatedTimePerOp == 0) speculatedTimePerOp = 1;
 
             // Avoids rechecking too often
             int shouldDo = 4;
@@ -792,7 +785,7 @@ public class Benchmark {
 
         public void addValues(Table table, String group) {
             Row row = table.createRow();
-            row.setColumn(0, group + " - " + name).setColumn(1, String.valueOf(avg));
+            row.setColumn(0, group + " - " + name).setColumn(1, BigDecimal.valueOf(avg).round(new MathContext(3, RoundingMode.HALF_EVEN)).toString());
         }
 
         /**
