@@ -92,30 +92,30 @@ public class StructBenchmark {
             setup = () -> idx = new Random().nextInt(100);
         }
 
-        @Benchmark.Measure public long list(Benchmark.StatefulOp statefulOp) {
-            statefulOp.op(LIST.get(idx));
+        @Benchmark.Measure public long list() {
+            op.op(LIST.get(idx));
             return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct(Benchmark.StatefulOp statefulOp) {
-            statefulOp.op(STRUCT.read(idx));
+        @Benchmark.Measure public long struct() {
+            op.op(STRUCT.read(idx));
             return System.nanoTime();
         }
     }
 
     public static class Iterate extends Benchmark.Unit {
-        @Benchmark.Measure public long list(Benchmark.StatefulOp statefulOp) {
+        @Benchmark.Measure public long list() {
             for (Object o : LIST) {
-                statefulOp.op(o.hashCode());
+                op.op(o.hashCode());
             }
             return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct(Benchmark.StatefulOp statefulOp) {
+        @Benchmark.Measure public long struct() {
             STRUCT.iterate(new StructVisitor<Object>() {
                 @Override
                 public void accept(Object item) {
-                    statefulOp.op(item.hashCode());
+                    op.op(item.hashCode());
                 }
             });
             return System.nanoTime();
@@ -132,12 +132,12 @@ public class StructBenchmark {
             };
         }
 
-        @Benchmark.Measure public long list(Benchmark.StatefulOp statefulOp) {
+        @Benchmark.Measure public long list() {
             LIST.add(object);
             return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct(Benchmark.StatefulOp statefulOp) {
+        @Benchmark.Measure public long struct() {
             STRUCT.insert(object);
             return System.nanoTime();
         }
@@ -150,13 +150,13 @@ public class StructBenchmark {
             remove = LIST.get(2);
         }
 
-        @Benchmark.Measure public long list(Benchmark.StatefulOp statefulOp) {
-            statefulOp.op(LIST.remove(remove));
+        @Benchmark.Measure public long list() {
+            op.op(LIST.remove(remove));
             return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct(Benchmark.StatefulOp statefulOp) {
-            statefulOp.op(STRUCT.delete(remove));
+        @Benchmark.Measure public long struct() {
+            op.op(STRUCT.delete(remove));
             return System.nanoTime();
         }
     }
@@ -168,13 +168,13 @@ public class StructBenchmark {
             find = new Object();
         }
 
-        @Benchmark.Measure public long list(Benchmark.StatefulOp statefulOp) {
-            statefulOp.op(LIST.indexOf(find));
+        @Benchmark.Measure public long list() {
+            op.op(LIST.indexOf(find));
             return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct(Benchmark.StatefulOp statefulOp) {
-            statefulOp.op(STRUCT.indexOf(find));
+        @Benchmark.Measure public long struct() {
+            op.op(STRUCT.indexOf(find));
             return System.nanoTime();
         }
     }

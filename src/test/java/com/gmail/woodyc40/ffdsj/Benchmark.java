@@ -80,17 +80,17 @@ import java.util.*;
  *             new Benchmark().group("Benchmark").perform(new Bench()).run();
  *         }
  *
- *         &#64;Benchmark.Unit public long time(Benchmark.StatefulOp stateOp) {
- *             stateOp.op(...);
+ *         &#64;Benchmark.Unit public long time(Benchmark.StatefulOp op) {
+ *             op.op(...);
  *             return System.nanoTime();
  *         }
  *
  *         // Minimal overhead idiom
- *         &#64;Benchmark.Unit public long timeAnother(Benchmark.StatefulOp stateOp) {
+ *         &#64;Benchmark.Unit public long timeAnother(Benchmark.StatefulOp op) {
  *             Object o = ...
  *             long time = System.nanoTime();
  *
- *             stateOp.op(o);
+ *             op.op(o);
  *             return time;
  *         }
  *     }
@@ -395,7 +395,7 @@ public class Benchmark {
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    super." + meName + "(stateOp);\n" +
+                        "    super." + meName + "();\n" +
                         "    done += 1;\n" +
                         "} while (done < " + warmupIterations + ");\n" +
                         "long end = System.nanoTime();\n" +
@@ -407,7 +407,7 @@ public class Benchmark {
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    super." + meName + "(stateOp);\n" +
+                        "    super." + meName + "();\n" +
                         "} while (++done < reps);\n" +
                         "long end = System.nanoTime();" +
                         "return (long) (end - start);}", file);
@@ -416,7 +416,7 @@ public class Benchmark {
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    stateOp.op(super." + meName + "(stateOp));\n" +
+                        "    op.op(super." + meName + "());\n" +
                         "    done += 1;\n" +
                         "} while (done < " + warmupIterations + ");\n" +
                         "long end = System.nanoTime();\n" +
@@ -427,7 +427,7 @@ public class Benchmark {
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    stateOp.op(super." + meName + "(stateOp));\n" +
+                        "    op.op(super." + meName + "());\n" +
                         "} while (++done < reps);\n" +
                         "long end = System.nanoTime();" +
                         "return (long) (end - start);}", file);
@@ -472,7 +472,7 @@ public class Benchmark {
                     "do {\n" +
                     "    long time = 0L;\n" +
                     "    int finished = 0;\n" +
-                    "    setup.run(); stateOp.trickJit();\n" +
+                    "    setup.run();\n" +
                     "    do {\n" +
                     "        reps++;\n" +
                     // The determination method breaks very often, requiring this check
@@ -488,7 +488,7 @@ public class Benchmark {
                     "    done += finished;\n" +
                     "} while (done < " + profileIterations + ");\n" +
 
-                    "stateOp = null;\n" +
+                    "op = null;\n" +
                     "stream.writeDouble(totalTime.doubleValue());\n" +
                     "System.out.println(\"Finished testing of " + name + "\");\n" +
                     "System.out.println();\n" +
@@ -636,91 +636,92 @@ public class Benchmark {
      * @author Pierre C
      */
     public static class StatefulOp {
-        // Sinks
-        private int random = new Random().nextInt(2_000_000_000);
-        private int intSink;
-        private float floatSink;
-        private double doubleSink;
-        private char charSink;
-        private short shortSink;
-        private long longSink;
-        private byte byteSink;
-        private boolean booleanSink;
+        private int random = prng(0);
 
         // Only instantiable in this class
         StatefulOp() {
         }
 
-        /**
-         * Called to use the fields - smart JIT's will eliminate usages of a fields that don't do anything
-         */
-        public void trickJit() {
-            long type = (long) (intSink + floatSink + doubleSink + charSink + shortSink + longSink + byteSink + random / 2);
-            if (booleanSink ? type == -1 : type == -3) { // Dividing by two
-                                                         // probably not result in odd number
-                                                         // or negative numbers
-                Thread.currentThread().setContextClassLoader(null);
-            }
+        private int prng(int seed) {
+            return Math.abs((int) (System.currentTimeMillis()) - (0x61732 & seed)) / new Object().hashCode();
         }
+
+        // The idea of this class is to check a bunch of random events and see if they are true
+        // if they are, then update the state of the internal random value
+        // predominantly, it checks if a value is equal to the max value of the data type, and if
+        // the random also equals the particular number.
+        // Even if the number is the maximum, the random is highly, highly unlikely to be so
+        // primarily because currentTimeMillis in the prng function will always return a higher number
+        // than the last random's currentTimeMillis. If the subtracted number happens to be negative,
+        // then the hashCode needs to be negative as well. I haven't seen many negative hashCodes,
+        // and even then, if the number is positive, the hashcode needs to be FRACTIONAL to increase
+        // currentTimeMillis to the max integer
+
+        // I am hoping the JIT doesn't DCE the op methods because the last value must be known
+        // and even a decent compiler isn't stupid enough to determine the last 0-millions of
+        // milliseconds worth just to compute the time...
 
         // Consumption methods
 
         public void op(Object o) {
-            // o.hashCode intrinsic
-            // probably only 2-5 instructions to check this
-            if (o.hashCode() == random) {
-                random = o.toString().hashCode(); // Fairly "expensive"
-            }
+            op(o.hashCode());
         }
 
         // Each method given for the primitive
         // primitive boxing is very expensive at times
         // otherwise use Object cast as necessary
+
+        // Please java please inline the constants
         public void op(int i) {
-            if (intSink == i) {
-                intSink = i;
+            if (i == Integer.MAX_VALUE && i == random) {
+                random = prng(random);
             }
         }
 
+        // This can't happen because only 0/x will equal 0
         public void op(float i) {
-            if (floatSink == i) {
-                floatSink = i;
+            if (i != 0 && i / random == 0) {
+                random = prng(random);
             }
         }
 
+        // This works because rounding on integer types
+        // will round. This won't, so having the numerator
+        // equal to zero and equal a quotient of zero isn't
+        // happening
         public void op(double i) {
-            if (doubleSink == i) {
-                doubleSink = i;
+            if (i != 0 && i / random == 0) {
+                random = prng(random);
             }
         }
 
         public void op(char i) {
-            if (charSink == i) {
-                charSink = i;
+            if (i == Character.MAX_VALUE && i == random) {
+                random = prng(random);
             }
         }
 
         public void op(short i) {
-            if (shortSink == i) {
-                shortSink = i;
+            if (i == Short.MAX_VALUE && i == random) {
+                random = prng(random);
             }
         }
 
         public void op(long i) {
-            if (longSink == i) {
-                longSink = i;
+            if (i == Long.MAX_VALUE && i == random) {
+                random = prng(random);
             }
         }
 
         public void op(byte i) {
-            if (byteSink == i) {
-                byteSink = i;
+            if (i == Byte.MAX_VALUE && i == random) {
+                random = prng(random);
             }
         }
 
         public void op(boolean i) {
-            if (booleanSink == i) {
-                booleanSink = !i;
+            if (!i && random == Integer.MAX_VALUE) {
+                random = prng(random);
             }
         }
     }
@@ -731,7 +732,7 @@ public class Benchmark {
      * @author Pierre C
      */
     public static class Unit {
-        public StatefulOp stateOp = new StatefulOp();
+        public StatefulOp op = new StatefulOp();
         public Runnable setup = NO_OP;
         public Runnable teardown = NO_OP;
 
@@ -740,7 +741,9 @@ public class Benchmark {
          *
          * <p>Starts the timer, then sets the stop when the next invocation of nanoTime doesn't equal the start.</p>
          *
-         * @return an arbitraty number passed to the iteration determination method
+         * <p>Called internally</p>
+         *
+         * @return an arbitrary number passed to the iteration determination method
          */
         public final long nanoAccuracy() {
             long start = System.nanoTime();
@@ -774,8 +777,7 @@ public class Benchmark {
 
             // Avoids rechecking too often
             // This number must be small enough such that the runs of this test method
-            // will call trickJit sufficiently to ensure the effects are propagated
-            // before the JVM can think it can eliminate "dead code" and deoptimize again
+            // will setup/teardown with at least some frequency
             int shouldDo = 4;
             if (speculatedTimePerOp < timeMustPass) {
                 // Calculates amount that can be usefully done in the required time

@@ -62,7 +62,14 @@ public class BenchmarkTest extends Benchmark.Unit {
     private static MethodAccessor accessor;
 
     public static void main(String... args) {
-        new Benchmark().group("reflection").perform(new BenchmarkTest()).run();
+        new Benchmark().group("reflection").perform(new BenchmarkTest()).run(//"-XX:+UnlockDiagnosticVMOptions",
+                //"-XX:+PrintAssembly",
+                //"-XX:CompileCommand=print,com.gmail.woodyc40.ffdsj.BenchmarkTest::*",
+                //"-XX:+LogCompilation",
+                //"-XX:PrintAssemblyOptions=intel",
+                //"-XX:+AggressiveOpts",
+                //"-XX:CompileThreshold=1000"
+        );
     }
 
     static {
@@ -75,13 +82,13 @@ public class BenchmarkTest extends Benchmark.Unit {
         }
     }
 
-    @Benchmark.Measure public void NormalInvoke(Benchmark.StatefulOp statefulOp) {
-        statefulOp.op(dummy.doWork());
+    @Benchmark.Measure public void NormalInvoke() {
+        op.op(dummy.doWork());
     }
 
-    @Benchmark.Measure public void ReflectInvoke(Benchmark.StatefulOp statefulOp) {
+    @Benchmark.Measure public void ReflectInvoke() {
         try {
-            statefulOp.op(method.invoke(dummy));
+            op.op(method.invoke(dummy));
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
@@ -90,9 +97,9 @@ public class BenchmarkTest extends Benchmark.Unit {
     }
 
     private static final Object[] args = new Object[0];
-    @Benchmark.Measure public void SunInvoke(Benchmark.StatefulOp statefulOp) {
+    @Benchmark.Measure public void SunInvoke() {
         try {
-            statefulOp.op(accessor.invoke(dummy, args));
+            op.op(accessor.invoke(dummy, args));
         } catch (InvocationTargetException e) {
             e.printStackTrace();
         }
