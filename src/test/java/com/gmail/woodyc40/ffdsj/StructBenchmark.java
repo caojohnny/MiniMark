@@ -26,40 +26,37 @@ import java.util.Random;
 =============================== 8< (Cut here) ===============================
 
 Results:
-+-----------------------------------------------------------------+-------+
-|Name                                                             |Average|
-+-----------------------------------------------------------------+-------+
-|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_list          |49.601 |
-|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_struct        |47.576 |
-|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_list  |440.676|
-|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_struct|288.996|
-|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_list          |63.693 |
-|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_struct        |52.075 |
-|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_struct  |113.798|
-|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_list    |117.589|
-|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_struct  |117.876|
-|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_list    |119.091|
-+-----------------------------------------------------------------+-------+
++-----------------------------------------------------------------+----------+
+|Name                                                             |Average   |
++-----------------------------------------------------------------+----------+
+|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_list          |29.199 ns |
+|Get - com_gmail_woodyc40_ffdsj_StructBenchmark$Get_struct        |28.376 ns |
+|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_list  |388.589 ns|
+|Iterate - com_gmail_woodyc40_ffdsj_StructBenchmark$Iterate_struct|257.645 ns|
+|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_list          |27.080 ns |
+|Put - com_gmail_woodyc40_ffdsj_StructBenchmark$Put_struct        |30.409 ns |
+|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_struct  |99.837 ns |
+|Remove - com_gmail_woodyc40_ffdsj_StructBenchmark$Remove_list    |97.327 ns |
+|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_struct  |98.123 ns |
+|Search - com_gmail_woodyc40_ffdsj_StructBenchmark$Search_list    |98.151 ns |
++-----------------------------------------------------------------+----------+
 
 System info:
-Running Mac OS X version 10.10.3 arch x86_64
-Java version 1.8.0_45 JVM Oracle Corporation
-Java flags: -Didea.launcher.port=7533 -Didea.launcher.bin.path=/Applications/IntelliJ IDEA 14.app/Contents/bin -Dfile.encoding=UTF-8
-Memory total 17179869184 bytes, usable 8480411648 bytes
-VM memory free 211986072 bytes, max 3817865216 bytes, total 257425408 bytes
-CPUs (8):
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-Disks (1):
-  Macintosh HD (/) cap 249795969024 bytes, usable 205430296576 bytes
-PSUs (1):
-  InternalBattery-0: remaining cap 1.000000, time left -2.000000
+Running Linux version 3.2.0-4-amd64 arch amd64
+Java version 1.8.0_40 JVM Oracle Corporation
+Java flags: -Didea.launcher.port=7533 -Didea.launcher.bin.path=/home/agenttroll/idea/bin -Dfile.encoding=UTF-8
+Memory total 16810151936 bytes, usable 15470944256 bytes
+VM memory free 192317792 bytes, max 3736076288 bytes, total 253231104 bytes
+CPUs (4):
+  Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz
+  Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz
+  Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz
+  Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz
+Disks (3):
+  / cap 566741975040 bytes, usable 527316275200 bytes
+  / cap 566741975040 bytes, usable 527316275200 bytes
+  rpc_pipefs cap 0 bytes, usable 0 bytes
+PSUs (0):
 
 =============================================================================
  */
@@ -81,7 +78,6 @@ public class StructBenchmark {
 
     public static void main(String[] args) {
         Benchmark benchmark = new Benchmark();
-        benchmark.setProfileIterations(5_000_000);
         benchmark.group("Get").perform(new Get())
                 .group("Iterate").perform(new Iterate())
                 .group("Put").perform(new Put())
@@ -130,6 +126,10 @@ public class StructBenchmark {
         Object object;
         public Put() {
             setup = () -> object = new Object();
+            teardown = () -> {
+                LIST.clear();
+                STRUCT.purge();
+            };
         }
 
         @Benchmark.Measure public long list(Benchmark.StatefulOp statefulOp) {

@@ -190,7 +190,9 @@ public class Benchmark {
         for (String s : benchmarks.keySet()) {
             Map<String, Mark> marks = benchmarks.get(s);
             for (Mark mark : marks.values()) {
-                mark.result.addValues(table, s);
+                Result result = mark.result;
+                if (result == null) result = Result.compile(this, mark.name, -1D);
+                result.addValues(table, s);
             }
         }
         table.print(System.out);
@@ -604,7 +606,6 @@ public class Benchmark {
                     ProcessBuilder builder = new ProcessBuilder(args);
                     builder.directory(new File(".")).inheritIO().start();
 
-                    int port = 5000;
                     socket = new ServerSocket(5000);
                     while ((conn = socket.accept()) == null) ;
 
@@ -824,7 +825,7 @@ public class Benchmark {
         public void addValues(Table table, String group) {
             Row row = table.createRow();
             row.setColumn(0, group + " - " + name).setColumn(1, BigDecimal.valueOf(avg)
-                    .divide(BigDecimal.ONE, 3, BigDecimal.ROUND_HALF_UP).toString());
+                    .divide(BigDecimal.ONE, 3, BigDecimal.ROUND_HALF_UP).toString() + " ns");
         }
 
         /**
