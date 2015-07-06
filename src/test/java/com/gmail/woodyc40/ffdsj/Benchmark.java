@@ -80,17 +80,17 @@ import java.util.*;
  *             new Benchmark().group("Benchmark").perform(new Bench()).run();
  *         }
  *
- *         &#64;Benchmark.Unit public long time(Benchmark.StatefulOp hole) {
- *             hole.op(...);
+ *         &#64;Benchmark.Unit public long time(Benchmark.StatefulOp stateOp) {
+ *             stateOp.op(...);
  *             return System.nanoTime();
  *         }
  *
  *         // Minimal overhead idiom
- *         &#64;Benchmark.Unit public long timeAnother(Benchmark.StatefulOp hole) {
+ *         &#64;Benchmark.Unit public long timeAnother(Benchmark.StatefulOp stateOp) {
  *             Object o = ...
  *             long time = System.nanoTime();
  *
- *             hole.op(o);
+ *             stateOp.op(o);
  *             return time;
  *         }
  *     }
@@ -260,7 +260,9 @@ public class Benchmark {
      *
      * @param profileIterations the iterations
      * @return the current instance
+     * @deprecated wtf?
      */
+    @Deprecated
     public Benchmark setProfileIterations(int profileIterations) {
         this.profileIterations = profileIterations;
         return this;
@@ -309,7 +311,7 @@ public class Benchmark {
         Processor[] procs = layer.getProcessors();
         System.out.println("CPUs (" + procs.length + "):");
         for (Processor p : procs) {
-            System.out.printf("  %s x%s\n", p.getName(), p.isCpu64bit() ? "64" : "x86");
+            System.out.printf("  %s\n", p.getName());
         }
 
         OSFileStore[] stores = layer.getFileStores();
@@ -378,17 +380,20 @@ public class Benchmark {
             CtClass unit = classPool.get(Unit.class.getName());
             CtClass result = classPool.get(Result.class.getName());
 
+            // javassist bug, too lazy to test if it works on GA 20
             CtConstructor constructor = CtNewConstructor.make("public " + file.getSimpleName() + "() {}", file);
             file.addConstructor(constructor);
 
             CtMethod warmup;
             CtMethod measure;
+
+            // Make it easier and not need to return null for no reason... resulting in this boilerplate...
             if (this.unit.getClass().getDeclaredMethod(meName, StatefulOp.class).getReturnType().equals(void.class)) {
                 warmup = CtNewMethod.make("public long warmup() {\n" +
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    super." + meName + "(hole);\n" +
+                        "    super." + meName + "(stateOp);\n" +
                         "    done += 1;\n" +
                         "} while (done < " + warmupIterations + ");\n" +
                         "long end = System.nanoTime();\n" +
@@ -400,7 +405,7 @@ public class Benchmark {
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    super." + meName + "(hole);\n" +
+                        "    super." + meName + "(stateOp);\n" +
                         "} while (++done < reps);\n" +
                         "long end = System.nanoTime();" +
                         "return (long) (end - start);}", file);
@@ -409,7 +414,7 @@ public class Benchmark {
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    hole.op(super." + meName + "(hole));\n" +
+                        "    stateOp.op(super." + meName + "(stateOp));\n" +
                         "    done += 1;\n" +
                         "} while (done < " + warmupIterations + ");\n" +
                         "long end = System.nanoTime();\n" +
@@ -420,7 +425,7 @@ public class Benchmark {
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +
                         "do {\n" +
-                        "    hole.op(super." + meName + "(hole));\n" +
+                        "    stateOp.op(super." + meName + "(stateOp));\n" +
                         "} while (++done < reps);\n" +
                         "long end = System.nanoTime();" +
                         "return (long) (end - start);}", file);
@@ -455,27 +460,34 @@ public class Benchmark {
                     "long nanoAcc = nanoAccuracy();\n" +
                     "int reps = calcIterations(warmTime, nanoAcc, 0);\n" +
                     "\n" +
+                    // Do not divide this number
+                    // attempting to do so will result in a massive deviation of the
+                    // actual time due to rounding retardation
+                    // Therefore pass this raw to the socket pipeline
                     "java.math.BigDecimal totalTime = new java.math.BigDecimal(0);\n" +
                     "int done = 0;\n" +
 
                     "do {\n" +
                     "    long time = 0L;\n" +
                     "    int finished = 0;\n" +
-                    "    setup.run(); hole.trickJit();\n" +
+                    "    setup.run(); stateOp.trickJit();\n" +
                     "    do {\n" +
                     "        reps++;\n" +
+                    // The determination method breaks very often, requiring this check
+                    "        if (reps + done >= " + profileIterations + ")\n" +
+                    "            reps = 1;\n" +
                     "        time = measure(reps);\n" +
                     "        finished = reps;\n" +
+                    // Calculate the reps for the next measurement loop
                     "        reps = calcIterations(time / reps, nanoAcc = nanoAccuracy(), (" + profileIterations + " - (done + finished)) - 1);\n" +
-                    "        if (reps + done > " + profileIterations + ")\n" +
-                    "            reps = 1;\n" +
                     "    } while (time <= nanoAcc);\n" +
                     "    teardown.run();\n" +
                     "    totalTime = totalTime.add(java.math.BigDecimal.valueOf(time));\n" +
                     "    done += finished;\n" +
                     "} while (done < " + profileIterations + ");\n" +
 
-                    "hole = null;\n" +
+                    "stateOp = null;\n" +
+                    "System.out.println(done);" +
                     "stream.writeDouble(totalTime.doubleValue());\n" +
                     "System.out.println(\"Finished testing of " + name + "\");\n" +
                     "System.out.println();\n" +
@@ -496,9 +508,12 @@ public class Benchmark {
                     invoker + " test = new " + invoker + "();\n" +
                     "int done = 0;\n" + // Settle in the JVM, warmups may not be enough to completely
                                         // transition the VM into ready state
-                    "System.out.println(\"Setting VM for " + name + "\");\n" +
+                    "System.out.println(\"Settling VM for " + name + "\");\n" +
+                    // Hashcode is a good, fast, psn number
                     "for (int i = 0; i < 5000000; i++) { done += new Object().hashCode(); }\n" +
+                    // hi jit
                     "if (done / 2 == 6) { System.out.println(); }\n" +
+                    // extra runs to take up time
                     "long time = System.currentTimeMillis();" +
                     "do {" +
                     "test.warmup();" +
@@ -555,6 +570,7 @@ public class Benchmark {
                 if (dep.startsWith("sun")) continue;
                 if (dep.startsWith("org/objectweb/asm")) continue;
                 if (dep.startsWith("oshi")) continue;
+                if (dep.startsWith("com/google/common")) continue;
                 if (depped.contains(dep)) continue;
 
                 CtClass depend = ClassPool.getDefault().get(dep);
@@ -715,10 +731,17 @@ public class Benchmark {
      * @author Pierre C
      */
     public static class Unit {
-        public StatefulOp hole = new StatefulOp();
+        public StatefulOp stateOp = new StatefulOp();
         public Runnable setup = NO_OP;
         public Runnable teardown = NO_OP;
 
+        /**
+         * Determines the latency + granularity of nanoTime
+         *
+         * <p>Starts the timer, then sets the stop when the next invocation of nanoTime doesn't equal the start.</p>
+         *
+         * @return an arbitraty number passed to the iteration determination method
+         */
         public final long nanoAccuracy() {
             long start = System.nanoTime();
             long stop;
@@ -728,13 +751,31 @@ public class Benchmark {
             return stop - start;
         }
 
+        /**
+         * Complex method determines the next amount of iterations to run the test iterations
+         *
+         * <p>Nice to play around with, but calling this method won't do anything. Mostly used internally. Please don't proxy it.</p>
+         *
+         * <p>The implementation is described in the source</p>
+         *
+         * @param speculatedTimePerOp the time of the last run per opertion
+         * @param nanoAcc the granularity + latency of the nanoTime method
+         * @param left the amount of runs left
+         * @return the iterations to run next
+         */
         public final int calcIterations(long speculatedTimePerOp, long nanoAcc, int left) {
             double timeMustPass = Math.ceil(nanoAcc * 2); // Compensates for fluctuations in
                                                           // accuracy of nanotime
 
+            // This could happen if the rounding becomes retarded
+            // resulting in divide by zero error
+            // therefore we must set the minimum at the smallest positive integer
             if (speculatedTimePerOp == 0) speculatedTimePerOp = 1;
 
             // Avoids rechecking too often
+            // This number must be small enough such that the runs of this test method
+            // will call trickJit sufficiently to ensure the effects are propagated
+            // before the JVM can think it can eliminate "dead code" and deoptimize again
             int shouldDo = 4;
             if (speculatedTimePerOp < timeMustPass) {
                 // Calculates amount that can be usefully done in the required time
@@ -752,7 +793,7 @@ public class Benchmark {
             // If the amount of repetitions left is less than the current amount
             // add that too so we can finish evenly
             // sometimes this will fail... check has been added in the synthetic method
-            if (left != 0) {
+            if (left > 0) {
                 if (left <= shouldDo) {
                     shouldDo = left;
                 }

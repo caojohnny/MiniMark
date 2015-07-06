@@ -62,8 +62,7 @@ public class BenchmarkTest extends Benchmark.Unit {
     private static MethodAccessor accessor;
 
     public static void main(String... args) {
-        new Benchmark().group("reflection").perform(new BenchmarkTest())
-                .run("-XX:+UnlockDiagnosticVMOptions", "-XX:+PrintAssembly", "-XX:+PrintCompilation");
+        new Benchmark().group("reflection").perform(new BenchmarkTest()).run();
     }
 
     static {
