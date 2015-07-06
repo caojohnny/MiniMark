@@ -390,7 +390,7 @@ public class Benchmark {
             CtMethod measure;
 
             // Make it easier and not need to return null for no reason... resulting in this boilerplate...
-            if (this.unit.getClass().getDeclaredMethod(meName, StatefulOp.class).getReturnType().equals(void.class)) {
+            if (this.unit.getClass().getDeclaredMethod(meName).getReturnType().equals(void.class)) {
                 warmup = CtNewMethod.make("public long warmup() {\n" +
                         "int done = 0;\n" +
                         "long start = System.nanoTime();\n" +

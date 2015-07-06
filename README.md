@@ -63,13 +63,13 @@ public class Bench extends Benchmark.Unit {
         mark.group("ArrayList Speed").profile(new Bench()).run();
     }
     
-    // Returns void, has StatefulOp as an arg
-    @Benchmark.Measure public void add(Benchmark.StatefulOp op) {
+    // Returns void, has no args
+    @Benchmark.Measure public void add() {
         op.op(list.add(add));
     }
     
     // Same as add, but returns something
-    @Benchmark.Measure public Object remove(Benchmark.StatefulOp op) {
+    @Benchmark.Measure public Object remove() {
         return internalRemove();
     }
     
@@ -80,9 +80,11 @@ public class Bench extends Benchmark.Unit {
 }
 ```
 
-Benchmark classes must be public, non-final, and have a public, default constructor. The class must extend `Benchmark.Unit`. This is so the synthesiser can create a synthetic class that extends the unit. All benchmark methods are annotated with `@Benchmark.Measure`, and should have the parameter `Benchmark.StatefulOp`. You may choose any return type. Use the return type to automatically consume operations that need to change the state of the application to prevent Dead Code Elimination. 
+Benchmark classes must be public, non-final, and have a public, default constructor. The class must extend `Benchmark.Unit`. This is so the synthesiser can create a synthetic class that extends the unit. All benchmark methods are annotated with `@Benchmark.Measure`, and should have no parameters. You may choose any return type. Use the return type to automatically consume operations that need to change the state of the application to prevent Dead Code Elimination.
 
 To run the benchmark, setup the `main` method, instantiate `new Benchmark()`, then add a group, then profile the instance of the class, and invoke `run`. To provide JVM arguments for the runners, specify each as a varargs array in the `run` method.
+
+`op` is a StatefulOp which allows you to explicitly consume objects rather than removing them to prevent DCE.
 
 ## Reading benchmarks
 
