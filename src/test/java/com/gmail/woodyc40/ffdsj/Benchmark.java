@@ -487,7 +487,6 @@ public class Benchmark {
                     "} while (done < " + profileIterations + ");\n" +
 
                     "stateOp = null;\n" +
-                    "System.out.println(done);" +
                     "stream.writeDouble(totalTime.doubleValue());\n" +
                     "System.out.println(\"Finished testing of " + name + "\");\n" +
                     "System.out.println();\n" +
