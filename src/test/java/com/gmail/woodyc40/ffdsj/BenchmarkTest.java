@@ -26,31 +26,31 @@ import java.lang.reflect.Method;
 =============================== 8< (Cut here) ===============================
 
 Results:
-+-----------------------------------------------------------------+-------+
-|Name                                                             |Average|
-+-----------------------------------------------------------------+-------+
-|reflection - com_gmail_woodyc40_ffdsj_BenchmarkTest_NormalInvoke |0.975  |
-|reflection - com_gmail_woodyc40_ffdsj_BenchmarkTest_ReflectInvoke|5.799  |
-|reflection - com_gmail_woodyc40_ffdsj_BenchmarkTest_SunInvoke    |7.187  |
-+-----------------------------------------------------------------+-------+
++-----------------------------------------------------------------+--------+
+|Name                                                             |Average |
++-----------------------------------------------------------------+--------+
+|reflection - com_gmail_woodyc40_ffdsj_BenchmarkTest_NormalInvoke |1.025 ns|
+|reflection - com_gmail_woodyc40_ffdsj_BenchmarkTest_ReflectInvoke|8.216 ns|
+|reflection - com_gmail_woodyc40_ffdsj_BenchmarkTest_SunInvoke    |7.223 ns|
++-----------------------------------------------------------------+--------+
 
 System info:
 Running Mac OS X version 10.10.3 arch x86_64
 Java version 1.8.0_45 JVM Oracle Corporation
-Java flags: -Didea.launcher.port=7532 -Didea.launcher.bin.path=/Applications/IntelliJ IDEA 14.app/Contents/bin -Dfile.encoding=UTF-8 -XX:+UnlockDiagnosticVMOptions -XX:+PrintAssembly -XX:+PrintCompilation
-Memory total 17179869184 bytes, usable 8396357632 bytes
-VM memory free 241192880 bytes, max 3817865216 bytes, total 257425408 bytes
+Java flags: -Didea.launcher.port=7533 -Didea.launcher.bin.path=/Applications/IntelliJ IDEA 14.app/Contents/bin -Dfile.encoding=UTF-8
+Memory total 17179869184 bytes, usable 9059049472 bytes
+VM memory free 223826768 bytes, max 3817865216 bytes, total 257425408 bytes
 CPUs (8):
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
-  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz x64
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
+  Intel(R) Core(TM) i7-4770HQ CPU @ 2.20GHz
 Disks (1):
-  Macintosh HD (/) cap 249795969024 bytes, usable 205428924416 bytes
+  Macintosh HD (/) cap 249795969024 bytes, usable 205422809088 bytes
 PSUs (1):
   InternalBattery-0: remaining cap 1.000000, time left -2.000000
 
