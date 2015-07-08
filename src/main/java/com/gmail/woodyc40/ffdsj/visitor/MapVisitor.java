@@ -19,6 +19,8 @@ package com.gmail.woodyc40.ffdsj.visitor;
 
 /**
  * Visits entries in a map
+ *
+ * @author Pierre C
  */
 public class MapVisitor<K, V> {
 }

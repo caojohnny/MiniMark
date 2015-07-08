@@ -651,7 +651,7 @@ public class Benchmark {
          */
         public void burn(int i) {
             for (; i > 0; i--) {
-                x = (x ^ 0xA51A) & (x ^ 0x41CE);
+                x |= (x ^ 0xF457) & (i ^ 0x38D3);
             }
         }
 
