@@ -18,7 +18,7 @@
 package com.gmail.woodyc40.ffdsj.visitor;
 
 /**
- * Created by agenttroll on 7/1/15.
+ * Visits entries in a map
  */
-public class MapVisitor {
+public class MapVisitor<K, V> {
 }

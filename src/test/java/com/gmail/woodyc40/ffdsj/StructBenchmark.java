@@ -61,7 +61,7 @@ PSUs (0):
 =============================================================================
  */
 public class StructBenchmark {
-    private static final int iterations = 100;
+    private static final int iterations = 500_000;
     private static final List<Object> LIST = new ArrayList<>(iterations);
     private static final Struct<Object> STRUCT = new Struct<>(iterations);
 
@@ -78,12 +78,12 @@ public class StructBenchmark {
 
     public static void main(String[] args) {
         Benchmark benchmark = new Benchmark();
-        benchmark.group("Get").perform(new Get())
+        benchmark.setProfileIterations(iterations).group("Get").perform(new Get())
                 .group("Iterate").perform(new Iterate())
                 .group("Put").perform(new Put())
                 .group("Remove").perform(new Remove())
                 .group("Search").perform(new Search());
-        benchmark.run();
+        benchmark.run("-Xms8G");
     }
 
     public static class Get extends Benchmark.Unit {
@@ -92,33 +92,29 @@ public class StructBenchmark {
             setup = () -> idx = new Random().nextInt(100);
         }
 
-        @Benchmark.Measure public long list() {
+        @Benchmark.Measure public void list() {
             op.op(LIST.get(idx));
-            return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct() {
+        @Benchmark.Measure public void struct() {
             op.op(STRUCT.read(idx));
-            return System.nanoTime();
         }
     }
 
     public static class Iterate extends Benchmark.Unit {
-        @Benchmark.Measure public long list() {
+        @Benchmark.Measure public void list() {
             for (Object o : LIST) {
                 op.op(o.hashCode());
             }
-            return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct() {
+        @Benchmark.Measure public void struct() {
             STRUCT.iterate(new StructVisitor<Object>() {
                 @Override
                 public void accept(Object item) {
                     op.op(item.hashCode());
                 }
             });
-            return System.nanoTime();
         }
     }
 
@@ -126,20 +122,14 @@ public class StructBenchmark {
         Object object;
         public Put() {
             setup = () -> object = new Object();
-            teardown = () -> {
-                LIST.clear();
-                STRUCT.purge();
-            };
         }
 
-        @Benchmark.Measure public long list() {
+        @Benchmark.Measure public void list() {
             LIST.add(object);
-            return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct() {
+        @Benchmark.Measure public void struct() {
             STRUCT.insert(object);
-            return System.nanoTime();
         }
     }
 
@@ -150,14 +140,12 @@ public class StructBenchmark {
             remove = LIST.get(2);
         }
 
-        @Benchmark.Measure public long list() {
+        @Benchmark.Measure public void list() {
             op.op(LIST.remove(remove));
-            return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct() {
+        @Benchmark.Measure public void struct() {
             op.op(STRUCT.delete(remove));
-            return System.nanoTime();
         }
     }
 
@@ -168,14 +156,12 @@ public class StructBenchmark {
             find = new Object();
         }
 
-        @Benchmark.Measure public long list() {
+        @Benchmark.Measure public void list() {
             op.op(LIST.indexOf(find));
-            return System.nanoTime();
         }
 
-        @Benchmark.Measure public long struct() {
+        @Benchmark.Measure public void struct() {
             op.op(STRUCT.indexOf(find));
-            return System.nanoTime();
         }
     }
 }

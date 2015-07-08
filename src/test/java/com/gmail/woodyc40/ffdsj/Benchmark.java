@@ -80,18 +80,14 @@ import java.util.*;
  *             new Benchmark().group("Benchmark").perform(new Bench()).run();
  *         }
  *
- *         &#64;Benchmark.Unit public long time(Benchmark.StatefulOp op) {
+ *         &#64;Benchmark.Unit public void time() {
  *             op.op(...);
- *             return System.nanoTime();
  *         }
  *
  *         // Minimal overhead idiom
- *         &#64;Benchmark.Unit public long timeAnother(Benchmark.StatefulOp op) {
+ *         &#64;Benchmark.Unit public Object timeAnother() {
  *             Object o = ...
- *             long time = System.nanoTime();
- *
- *             op.op(o);
- *             return time;
+ *             return o;
  *         }
  *     }
  * }</pre></p>
@@ -125,7 +121,7 @@ public class Benchmark {
     private final Map<String, Map<String, Mark>> benchmarks = new LinkedHashMap<>();
     /** The name of the current group being edited */
     private String string;
-
+    /** Runtime args */
     private String[] args;
 
     /**
@@ -262,10 +258,9 @@ public class Benchmark {
      *
      * @param profileIterations the iterations
      * @return the current instance
-     * @deprecated wtf?
+     * @deprecated confusing usage
      */
-    @Deprecated
-    public Benchmark setProfileIterations(int profileIterations) {
+    @Deprecated public Benchmark setProfileIterations(int profileIterations) {
         this.profileIterations = profileIterations;
         return this;
     }
@@ -636,7 +631,10 @@ public class Benchmark {
      * @author Pierre C
      */
     public static class StatefulOp {
+        /** The random value for opchecks */
         private int random = prng(0);
+        /** The value for burning off CPU */
+        private int x = prng(0);
 
         // Only instantiable in this class
         StatefulOp() {
@@ -644,6 +642,17 @@ public class Benchmark {
 
         private int prng(int seed) {
             return Math.abs((int) (System.currentTimeMillis()) - (0x61732 & seed)) / new Object().hashCode();
+        }
+
+        /**
+         * Burns off CPU time [linearly] to the given i
+         *
+         * @param i the time
+         */
+        public void burn(int i) {
+            for (; i > 0; i--) {
+                x = (x ^ 0xA51A) & (x ^ 0x41CE);
+            }
         }
 
         // The idea of this class is to check a bunch of random events and see if they are true
