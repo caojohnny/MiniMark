@@ -132,7 +132,7 @@ public class Benchmark {
      */
     public Benchmark group(String string) {
         this.string = string;
-        benchmarks.put(string, new HashMap<>());
+        benchmarks.put(string, new LinkedHashMap<>());
         return this;
     }
 
