@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.gmail.woodyc40.ffdsj;
+package com.gmail.woodyc40.minimark;
 
 import com.google.common.collect.Lists;
 import javassist.*;
@@ -23,11 +23,7 @@ import org.objectweb.asm.*;
 import org.objectweb.asm.signature.SignatureReader;
 import org.objectweb.asm.signature.SignatureVisitor;
 import oshi.SystemInfo;
-import oshi.hardware.HardwareAbstractionLayer;
-import oshi.hardware.Memory;
-import oshi.hardware.PowerSource;
-import oshi.hardware.Processor;
-import oshi.software.os.OSFileStore;
+import oshi.hardware.*;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -44,8 +40,6 @@ import java.net.Socket;
 import java.util.*;
 
 /**
- * Benchmarks code correctly
- *
  * <p>Notes/Lessons learned creating this class:
  *   - Benchmarking is very hard. Even this class is not close to perfect.
  *   - Bytecode synthetics is very hard. It took a few days to make this class.
@@ -92,13 +86,13 @@ import java.util.*;
  *     }
  * }</pre></p>
  *
- * @author Pierre C
+ * @author agenttroll
  */
-public class Benchmark {
+public class MiniMark {
     /**
      * Marks a method which provides a long when finished to profile it
      *
-     * @author Pierre C
+     * @author agenttroll
      */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
@@ -130,7 +124,7 @@ public class Benchmark {
      * @param string the group name
      * @return the current instance
      */
-    public Benchmark group(String string) {
+    public MiniMark group(String string) {
         this.string = string;
         benchmarks.put(string, new LinkedHashMap<>());
         return this;
@@ -142,7 +136,7 @@ public class Benchmark {
      * @param unit the unit of methods
      * @return the current instance
      */
-    public Benchmark perform(Unit unit) {
+    public MiniMark perform(Unit unit) {
         if (string == null) throw new IllegalStateException("Group cannot be null");
 
         for (Method s : unit.getClass().getDeclaredMethods()) {
@@ -246,7 +240,7 @@ public class Benchmark {
      * @param warmupIterations the iterations
      * @return the current instance
      */
-    public Benchmark setWarmupIterations(int warmupIterations) {
+    public MiniMark setWarmupIterations(int warmupIterations) {
         this.warmupIterations = warmupIterations;
         return this;
     }
@@ -260,7 +254,7 @@ public class Benchmark {
      * @return the current instance
      * @deprecated confusing usage
      */
-    @Deprecated public Benchmark setProfileIterations(int profileIterations) {
+    @Deprecated public MiniMark setProfileIterations(int profileIterations) {
         this.profileIterations = profileIterations;
         return this;
     }
@@ -298,30 +292,28 @@ public class Benchmark {
         SystemInfo info = new SystemInfo();
         HardwareAbstractionLayer layer = info.getHardware();
 
-        Memory memory = layer.getMemory();
-        System.out.printf("Memory total %d bytes, usable %d bytes\n", memory.getTotal(), memory.getAvailable());
+        GlobalMemory memory = layer.getMemory();
+        System.out.printf("Memory total %d bytes, usable %d bytes%n", memory.getTotal(), memory.getAvailable());
 
         Runtime runtime = Runtime.getRuntime();
-        System.out.printf("VM memory free %d bytes, max %d bytes, total %d bytes\n", runtime.freeMemory(),
+        System.out.printf("VM memory free %d bytes, max %d bytes, total %d bytes%n", runtime.freeMemory(),
                 runtime.maxMemory(), runtime.totalMemory());
 
-        Processor[] procs = layer.getProcessors();
-        System.out.println("CPUs (" + procs.length + "):");
-        for (Processor p : procs) {
-            System.out.printf("  %s\n", p.getName());
-        }
+        CentralProcessor proc = layer.getProcessor();
+        System.out.println("CPU:");
+        System.out.printf("  %s%n", proc.getName());
 
-        OSFileStore[] stores = layer.getFileStores();
+        HWDiskStore[] stores = layer.getDiskStores();
         System.out.print("Disks (" + stores.length + "):\n");
-        for (OSFileStore store : stores) {
-            System.out.printf("  %s cap %d bytes, usable %d bytes\n",
-                    store.getName(), store.getTotalSpace(), store.getUsableSpace());
+        for (HWDiskStore store : stores) {
+            System.out.printf("  %s %s size %d bytes%n",
+                    store.getModel(), store.getName(), store.getSize());
         }
 
         PowerSource[] sources = layer.getPowerSources();
         System.out.println("PSUs (" + sources.length + "):");
         for (PowerSource source : sources) {
-            System.out.printf("  %s: remaining cap %f, time left %f\n", source.getName(), source.getRemainingCapacity(),
+            System.out.printf("  %s: remaining %f, time left %f%n", source.getName(), source.getRemainingCapacity(),
                     source.getTimeRemaining());
         }
     }
@@ -332,7 +324,7 @@ public class Benchmark {
     /**
      * Represents a test of a given method
      *
-     * @author Pierre C
+     * @author agenttroll
      */
     private class Mark {
         private final String name;
@@ -373,7 +365,7 @@ public class Benchmark {
                     superclass);
             invoker = file.getName();
 
-            CtClass benchmark = classPool.get(Benchmark.class.getName());
+            CtClass benchmark = classPool.get(MiniMark.class.getName());
             CtClass unit = classPool.get(Unit.class.getName());
             CtClass result = classPool.get(Result.class.getName());
 
@@ -528,7 +520,7 @@ public class Benchmark {
                 reader.accept(visitor, 0);
                 Set<String> classes = visitor.getClasses();
                 for (String string : classes) {
-                    if (string.equals(Benchmark.class.getName().replaceAll("/", "\\.")))
+                    if (string.equals(MiniMark.class.getName().replaceAll("/", "\\.")))
                         break;
                     getDep(string);
                 }
@@ -560,7 +552,7 @@ public class Benchmark {
             DependencyVisitor visitor = new DependencyVisitor();
             reader.accept(visitor, 0);
             for (String dep : visitor.getClasses()) {
-                if (string.equals(Benchmark.class.getName().replaceAll("\\.", "/"))) return;
+                if (string.equals(MiniMark.class.getName().replaceAll("\\.", "/"))) return;
                 if (dep.startsWith("java")) continue;
                 if (dep.startsWith("com/sun")) continue;
                 if (dep.startsWith("sun")) continue;
@@ -595,7 +587,7 @@ public class Benchmark {
                     String s = System.getProperty("os.name").contains("Windows") ? ".exe" : "";
                     String javaCmd = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java" + s;
                     List<String> args = Lists.newArrayList(javaCmd);
-                    Collections.addAll(args, Benchmark.this.args);
+                    Collections.addAll(args, MiniMark.this.args);
                     args.addAll(Lists.newArrayList("-classpath", ".", invoker));
 
                     ProcessBuilder builder = new ProcessBuilder(args);
@@ -608,7 +600,7 @@ public class Benchmark {
 
                     double d = stream.readDouble();
 
-                    return result = Result.compile(Benchmark.this, name, d / profileIterations);
+                    return result = Result.compile(MiniMark.this, name, d / profileIterations);
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
@@ -628,19 +620,19 @@ public class Benchmark {
     /**
      * Swallows up unused references to make stateful changes and cheat the JIT
      *
-     * @author Pierre C
+     * @author agenttroll
      */
     public static class StatefulOp {
         /** The random value for opchecks */
-        private int random = prng(0);
+        private long random = prng(0);
         /** The value for burning off CPU */
-        private int x = prng(0);
+        private long x = prng(0);
 
         // Only instantiable in this class
         StatefulOp() {
         }
 
-        private int prng(int seed) {
+        private long prng(long seed) {
             return Math.abs((int) (System.currentTimeMillis()) - (0x61732 & seed)) / new Object().hashCode();
         }
 
@@ -738,7 +730,7 @@ public class Benchmark {
     /**
      * Extend this class to represent a Unit that has methods which are becnhmarked
      *
-     * @author Pierre C
+     * @author agenttroll
      */
     public static class Unit {
         public StatefulOp op = new StatefulOp();
@@ -817,19 +809,19 @@ public class Benchmark {
     /**
      * Represents the data collected by the benchmark
      *
-     * @author Pierre C
+     * @author agenttroll
      */
     public static class Result {
         // Data
         private final double avg;
         private final String name;
 
-        private Result(Benchmark benchmark, String name, double data) {
+        private Result(MiniMark benchmark, String name, double data) {
             this.name = name;
             this.avg = data;
         }
 
-        public static Result compile(Benchmark benchmark, String name, double data) {
+        public static Result compile(MiniMark benchmark, String name, double data) {
             return new Result(benchmark, name, data);
         }
 
@@ -1018,11 +1010,8 @@ public class Benchmark {
                 final String[] interfaces)
         {
             String p = getGroupKey(name);
-            current = groups.get(p);
-            if (current == null) {
-                current = new HashMap<>(); // FFDSJ diamond operator
-                groups.put(p, current);
-            }
+            current = groups.computeIfAbsent(p, k -> new HashMap<>());
+            // FFDSJ diamond operator
 
             if (signature == null) {
                 if (superName != null) {

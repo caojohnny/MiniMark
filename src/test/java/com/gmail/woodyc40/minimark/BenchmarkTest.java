@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.gmail.woodyc40.ffdsj;
+package com.gmail.woodyc40.minimark;
 
 import sun.reflect.MethodAccessor;
 import sun.reflect.ReflectionFactory;
@@ -56,13 +56,13 @@ PSUs (1):
 
 =============================================================================
 */
-public class BenchmarkTest extends Benchmark.Unit {
+public class BenchmarkTest extends MiniMark.Unit {
     private static final Dummy dummy = new Dummy();
     private static Method method;
     private static MethodAccessor accessor;
 
     public static void main(String... args) {
-        new Benchmark().group("reflection").perform(new BenchmarkTest()).run(//"-XX:+UnlockDiagnosticVMOptions",
+        new MiniMark().group("reflection").perform(new BenchmarkTest()).run(//"-XX:+UnlockDiagnosticVMOptions",
                 //"-XX:+PrintAssembly",
                 //"-XX:CompileCommand=print,com.gmail.woodyc40.ffdsj.BenchmarkTest::*",
                 //"-XX:+LogCompilation",
@@ -82,11 +82,14 @@ public class BenchmarkTest extends Benchmark.Unit {
         }
     }
 
-    @Benchmark.Measure public void NormalInvoke() {
+    @MiniMark.Measure public void Control() {
+    }
+
+    @MiniMark.Measure public void NormalInvoke() {
         op.op(dummy.doWork());
     }
 
-    @Benchmark.Measure public void ReflectInvoke() {
+    @MiniMark.Measure public void ReflectInvoke() {
         try {
             op.op(method.invoke(dummy));
         } catch (IllegalAccessException e) {
@@ -97,7 +100,7 @@ public class BenchmarkTest extends Benchmark.Unit {
     }
 
     private static final Object[] args = new Object[0];
-    @Benchmark.Measure public void SunInvoke() {
+    @MiniMark.Measure public void SunInvoke() {
         try {
             op.op(accessor.invoke(dummy, args));
         } catch (InvocationTargetException e) {

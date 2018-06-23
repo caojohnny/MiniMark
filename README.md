@@ -1,42 +1,6 @@
-# Fastest-Fing-Data-Structure-Java
-Really fast data structures
+# MiniMark
 
-# Usage
-
-Using the data structures
-
-## Struct
-
-```java
-IStruct<Object> struct = new Struct<>();
-
-// Reads the struct at the nth index
-Object o = struct.read(n);
-
-// Checks for existance of the object in the struct
-boolean contains = struct.has(new Object());
-
-// Places an element into the struct
-struct.insert(new Object());
-
-// Removes an element
-boolean done = struct.remove(new Object());
-
-// Visits each element in the struct within the specified parameters
-// Check the StructVisitor for information
-struct.iterate(new StructVisitor<Object>() {
-    @Override public void accept(Object visit) {
-        // Perform something
-    }
-}.from(10).to(-1));
-
-// Clears the struct
-struct.purge();
-```
-
-# Benchmarking
-
-A little special class I made for my own purposees that you can use too.
+All-in-one mini benchmark class, educational purposes only!
 
 ## Usage
 
