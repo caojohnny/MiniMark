@@ -2,6 +2,10 @@
 
 All-in-one mini benchmark class, educational purposes only!
 
+This was originally named FFDSJ because I wanted to create a bunch of collections that were really fast. Thing is, Java collections are already near perfectly optimized, and my decision to make my own specification for my collections was a bad idea. Instead, I turned this repository into a benchmarking utility only.
+
+Information can be found in the wiki tab.
+
 ## Usage
 
 ```java
