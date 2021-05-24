@@ -86,13 +86,13 @@ import java.util.*;
  *     }
  * }</pre></p>
  *
- * @author agenttroll
+ * @author caojohnny
  */
 public class MiniMark {
     /**
      * Marks a method which provides a long when finished to profile it
      *
-     * @author agenttroll
+     * @author caojohnny
      */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
@@ -324,7 +324,7 @@ public class MiniMark {
     /**
      * Represents a test of a given method
      *
-     * @author agenttroll
+     * @author caojohnny
      */
     private class Mark {
         private final String name;
@@ -620,7 +620,7 @@ public class MiniMark {
     /**
      * Swallows up unused references to make stateful changes and cheat the JIT
      *
-     * @author agenttroll
+     * @author caojohnny
      */
     public static class StatefulOp {
         /** The random value for opchecks */
@@ -730,7 +730,7 @@ public class MiniMark {
     /**
      * Extend this class to represent a Unit that has methods which are becnhmarked
      *
-     * @author agenttroll
+     * @author caojohnny
      */
     public static class Unit {
         public StatefulOp op = new StatefulOp();
@@ -809,7 +809,7 @@ public class MiniMark {
     /**
      * Represents the data collected by the benchmark
      *
-     * @author agenttroll
+     * @author caojohnny
      */
     public static class Result {
         // Data
